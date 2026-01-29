@@ -132,11 +132,27 @@ Color trace(const Ray& ray, const Scene& scene, int depth) {
         Vector3 N = closestObject->normal(hitPoint);
         MaterialProperties props = closestObject->determingMaterial(hitPoint);
         Vector3 V = (scene.camera->center - hitPoint).normalize();
+
         // Ambient
         Color finalColor(props.kd.r * props.ka, props.kd.g * props.ka, props.kd.b * props.ka);
 
         for (Light* l : scene.lights) {
-            Vector3 L = (l->position - hitPoint).normalize();
+            Vector3 lightVec = l->position - hitPoint;
+            float distanceToLight = std::sqrt(lightVec * lightVec);
+            Vector3 L = lightVec.normalize();
+
+            Ray shadowRay(hitPoint + (N * 0.008f), L);
+            bool inShadow = false;
+
+            for (Object* obj : scene.objects) {
+                float tShadow = obj->intersect(shadowRay);
+                if (tShadow > 0.0f && tShadow < distanceToLight) {
+                    inShadow = true;
+                    break; 
+                }
+            }
+
+            if (inShadow) continue; 
             float dotDiff = std::max(0.0f, N * L);
             
             // Diffuse
@@ -153,26 +169,24 @@ Color trace(const Ray& ray, const Scene& scene, int depth) {
                 finalColor.b += props.ks.b * l->intensity.b * specFactor;
             }
         }
-
-        // Reflection
+        if (props.ks.r > 0 || props.ks.g > 0 || props.ks.b > 0) {
         float dotIN = ray.direction * N;
         Vector3 reflectDir = (ray.direction - N * (2.0f * dotIN)).normalize();
-
         Point3 reflectOrigin = hitPoint + (N * 0.001f);
         Ray reflectedRay(reflectOrigin, reflectDir);
 
         Color reflectedColor = trace(reflectedRay, scene, depth - 1);
-
         float reflectionDampen = 0.2f; 
+
         finalColor.r += props.ks.r * reflectedColor.r * reflectionDampen;
         finalColor.g += props.ks.g * reflectedColor.g * reflectionDampen;
         finalColor.b += props.ks.b * reflectedColor.b * reflectionDampen;
-
+        }
         return finalColor;
     }
+
     return ray_color(ray, Color(1.0f, 1.0f, 1.0f), Color(0.0f, 0.0f, 0.8f));
 }
-
 //This function shoots multiple rays per pixel, samples the colors, averages them, and returns the final anti-aliased pixel color.
 Color getPixelColorAA(int x, int y, int width, int height, const Scene& scene, int samples, int maxDepth) {
     Color accumulatedColor(0, 0, 0);
