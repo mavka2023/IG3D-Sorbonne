@@ -113,7 +113,9 @@ Color ray_color(const Ray& r, Color background, Color foreground) {
     );
 }
 
-Color trace(const Ray& ray, const Scene& scene) {
+Color trace(const Ray& ray, const Scene& scene, int depth) {
+    if (depth <= 0) return Color(0, 0, 0);
+
     Object* closestObject = nullptr;
     float minT = std::numeric_limits<float>::max();
  
@@ -130,35 +132,49 @@ Color trace(const Ray& ray, const Scene& scene) {
         Vector3 N = closestObject->normal(hitPoint);
         MaterialProperties props = closestObject->determingMaterial(hitPoint);
         Vector3 V = (scene.camera->center - hitPoint).normalize();
-
-        Color finalColor(props.kd.r * props.ka,props.kd.g * props.ka,props.kd.b * props.ka);
+        // Ambient
+        Color finalColor(props.kd.r * props.ka, props.kd.g * props.ka, props.kd.b * props.ka);
 
         for (Light* l : scene.lights) {
             Vector3 L = (l->position - hitPoint).normalize();
-            
             float dotDiff = std::max(0.0f, N * L);
+            
+            // Diffuse
             finalColor.r += props.kd.r * l->intensity.r * dotDiff;
             finalColor.g += props.kd.g * l->intensity.g * dotDiff;
             finalColor.b += props.kd.b * l->intensity.b * dotDiff;
 
+            // Specular
             if (dotDiff > 0) {
-                Vector3 R = (N * (N * L) * 2.0f - L).normalize();
-                float specBase = std::max(0.0f, V * R);
-                float specFactor = std::pow(specBase, props.shininess);
-
+                Vector3 R_spec = (N * (N * L) * 2.0f - L).normalize();
+                float specFactor = std::pow(std::max(0.0f, V * R_spec), props.shininess);
                 finalColor.r += props.ks.r * l->intensity.r * specFactor;
                 finalColor.g += props.ks.g * l->intensity.g * specFactor;
                 finalColor.b += props.ks.b * l->intensity.b * specFactor;
             }
         }
+
+        // Reflection
+        float dotIN = ray.direction * N;
+        Vector3 reflectDir = (ray.direction - N * (2.0f * dotIN)).normalize();
+
+        Point3 reflectOrigin = hitPoint + (N * 0.001f);
+        Ray reflectedRay(reflectOrigin, reflectDir);
+
+        Color reflectedColor = trace(reflectedRay, scene, depth - 1);
+
+        float reflectionDampen = 0.2f; 
+        finalColor.r += props.ks.r * reflectedColor.r * reflectionDampen;
+        finalColor.g += props.ks.g * reflectedColor.g * reflectionDampen;
+        finalColor.b += props.ks.b * reflectedColor.b * reflectionDampen;
+
         return finalColor;
     }
-
     return ray_color(ray, Color(1.0f, 1.0f, 1.0f), Color(0.0f, 0.0f, 0.8f));
 }
 
 //This function shoots multiple rays per pixel, samples the colors, averages them, and returns the final anti-aliased pixel color.
-Color getPixelColorAA(int x, int y, int width, int height, const Scene& scene, int samples) {
+Color getPixelColorAA(int x, int y, int width, int height, const Scene& scene, int samples, int maxDepth) {
     Color accumulatedColor(0, 0, 0);
     
     int sqrtSamples = std::sqrt(samples); 
@@ -171,7 +187,7 @@ Color getPixelColorAA(int x, int y, int width, int height, const Scene& scene, i
 
             Ray ray = scene.camera->generateRay(x + offsetX, y + offsetY, width, height);
             
-            Color sampleColor = trace(ray, scene);
+            Color sampleColor = trace(ray, scene, maxDepth);
             accumulatedColor.r += sampleColor.r;
             accumulatedColor.g += sampleColor.g;
             accumulatedColor.b += sampleColor.b;

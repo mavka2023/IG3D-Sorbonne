@@ -149,8 +149,8 @@ public:
 
 Color ray_color(const Ray& r, Color background, Color foreground);
 
-Color trace(const Ray& ray, const Scene& scene);
+Color trace(const Ray& ray, const Scene& scene, int depth);
 
-Color getPixelColorAA(int x, int y, int width, int height, const Scene& scene, int samples);
+Color getPixelColorAA(int x, int y, int width, int height, const Scene& scene, int samples, int maxDepth=1);
 
 #endif
