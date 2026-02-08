@@ -14,11 +14,14 @@ int main() {
     scene.objects.push_back(new Sphere(Point3(2, 0, -6), 1.0f, blueMat));
     scene.objects.push_back(new Sphere(Point3(0, -1001.0, -6), 1000.0f, floorMat));
 
-    scene.lights.push_back(new PointLight(Color(1.0f, 1.0f, 1.0f), Point3(5, 5, 0)));
+    scene.lights.push_back(new PointLight(Color(0.5f, 0.5f, 0.5f), Point3(5, 5, 0)));
+    scene.lights.push_back(new PointLight(Color(0.5f, 0.5f, 0.5f), Point3(5, 6, 0)));
+    scene.lights.push_back(new PointLight(Color(0.5f, 0.5f, 0.5f), Point3(5, 6.5, 0)));
+    scene.lights.push_back(new PointLight(Color(0.5f, 0.5f, 0.5f), Point3(5, 7, 0)));
     scene.lights.push_back(new PointLight(Color(0.5f, 0.5f, 0.5f), Point3(-5, 3, 2)));
 
     Image img(800, 600);
-    int samples = 64; 
+    int samples = 4; 
 
     for (int y = 0; y < img.height; ++y) {
         for (int x = 0; x < img.width; ++x) {

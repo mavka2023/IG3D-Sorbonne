@@ -80,11 +80,20 @@ Sphere::Sphere(const Point3& c, float r, TextureMaterial* mat) : Object(mat), ce
 float Sphere::intersect(const Ray& ray) const {
     Vector3 oc = ray.point - center;
     float a = ray.direction * ray.direction;
-    float b = (ray.direction * oc) * 2.0f;
+    float b = 2.0f * (ray.direction * oc);
     float c = (oc * oc) - (radius * radius);
     float discriminant = b * b - 4 * a * c;
+
     if (discriminant < 0) return -1.0f;
-    return (-b - std::sqrt(discriminant)) / (2.0f * a);
+
+    float sqrtD = std::sqrt(discriminant);
+    
+    float t1 = (-b - sqrtD) / (2.0f * a);
+    float t2 = (-b + sqrtD) / (2.0f * a);
+    if (t1 > 0.0001f) return t1;
+    if (t2 > 0.0001f) return t2;
+
+    return -1.0f;
 }
 //In three-dimensional space, a surface normal, or simply normal, to a surface at point P
 //is a vector perpendicular to the tangent plane of the surface at P
